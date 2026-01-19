@@ -1,0 +1,116 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:rpi4_backend.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="rpi4_backend.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="rpi4_backend"
+        TransparencyLevelHint="AcrylicBlur"
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        Width="1280" Height="720"
+        WindowState="3"
+        >
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <!--<TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/> -->
+    <Panel>
+        <ExperimentalAcrylicBorder IsHitTestVisible="False">
+            <ExperimentalAcrylicBorder.Material>
+                <ExperimentalAcrylicMaterial
+                    BackgroundSource="Digger"
+                    TintColor="Black"
+                    TintOpacity="1"
+                    MaterialOpacity="0.65" />
+            </ExperimentalAcrylicBorder.Material>
+        </ExperimentalAcrylicBorder>
+        <Panel>
+        <StackPanel Margin="40" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Button Content="Espresso" Margin="10" Width="250" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="30" Command="{Binding OrderEspresso}"/>
+            <Button Content="Coffee" Margin="10" Width="250" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="30" Command="{Binding OrderCoffee}"/>
+            <Button Content="Americano" Margin="10" Width="250" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="30" Command="{Binding OrderAmericano}"/>
+        </StackPanel>
+        <StackPanel Margin="40" HorizontalAlignment="Right" VerticalAlignment="Top">
+            <Button Content="Set Temperature" Margin="10" Width="250" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="30" Command="{Binding SetTemperature}"/>
+            <Button Content="Set Aroma" Margin="10" Width="250" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="30" Command="{Binding SetAroma}"/>
+            <Button Content="Calibrate" Margin="10" Width="250" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="30" Command="{Binding Calibrate}"/>
+
+        </StackPanel>
+        <StackPanel Margin="40" HorizontalAlignment="Center" VerticalAlignment="Top">
+            <Panel Margin="10" Width="500" Height="190" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Button HorizontalAlignment="Center" VerticalAlignment="Top" Command="{Binding StartMachine}">
+                    <Button.Styles>
+                    <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+                      <Setter Property="CornerRadius" Value="10" />
+                    </Style>
+                    </Button.Styles>
+                    <Image Source="avares://rpi4_backend/Assets/power_settings_new_300dp_E8EAED_FILL0_wght400_GRAD0_opsz48.png"></Image>
+                </Button>
+            </Panel>
+        </StackPanel>
+        <Panel Margin="40" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+            <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto">
+                <Panel Margin="10" Width="250" Height="250" Grid.Row="0" Grid.Column="0">
+                    <Panel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Width="200" Height="200">
+                        <Image Source="avares://rpi4_backend/Assets/coffee_300dp_E8EAED_FILL0_wght400_GRAD0_opsz48.png"></Image>
+                    </Panel>
+                    <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="50,10,10,10">
+                        <TextBlock Grid.Row="0" Grid.Column="0" FontSize="15">Order:</TextBlock>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Name="Order1" FontSize="15"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" FontSize="15">State:</TextBlock>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Name="OrderedBy1" FontSize="15"/>
+                    </Grid>
+                </Panel>
+                <Panel Margin="60,10,10,10" Width="250" Height="250" Grid.Row="0" Grid.Column="1">
+                    <Panel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Width="200" Height="200">
+                        <Image Source="avares://rpi4_backend/Assets/coffee_300dp_E8EAED_FILL0_wght400_GRAD0_opsz48.png"></Image>
+                    </Panel>
+                    <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="50,10,10,10">
+                        <TextBlock Grid.Row="0" Grid.Column="0" FontSize="15">Order:</TextBlock>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Name="Order2" FontSize="15"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" FontSize="15">State:</TextBlock>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Name="OrderedBy2" FontSize="15"/>
+                    </Grid>
+                </Panel>
+            </Grid>
+        </Panel>
+        <Panel Margin="40" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+            <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto">
+                <Panel Margin="10" Width="250" Height="250" Grid.Row="0" Grid.Column="0">
+                    <Panel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Width="200" Height="200">
+                        <Image Source="avares://rpi4_backend/Assets/coffee_300dp_E8EAED_FILL0_wght400_GRAD0_opsz48.png"></Image>
+                    </Panel>
+                    <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="50,10,10,10">
+                        <TextBlock Grid.Row="0" Grid.Column="0" FontSize="15">Order:</TextBlock>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Name="Order3" FontSize="15"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" FontSize="15">State:</TextBlock>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Name="OrderedBy3" FontSize="15"/>
+                    </Grid>
+                </Panel>
+                <Panel Margin="60,10,10,10" Width="250" Height="250" Grid.Row="0" Grid.Column="1">
+                    <Panel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Width="200" Height="200">
+                        <Image Source="avares://rpi4_backend/Assets/coffee_300dp_E8EAED_FILL0_wght400_GRAD0_opsz48.png"></Image>
+                    </Panel>
+                    <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="50,10,10,10">
+                        <TextBlock Grid.Row="0" Grid.Column="0" FontSize="15">Order:</TextBlock>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Name="Order4" FontSize="15"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" FontSize="15">State:</TextBlock>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Name="OrderedBy4" FontSize="15"/>
+                    </Grid>
+                </Panel>
+            </Grid>
+        </Panel>
+        </Panel>
+    </Panel>
+
+
+
+</Window>

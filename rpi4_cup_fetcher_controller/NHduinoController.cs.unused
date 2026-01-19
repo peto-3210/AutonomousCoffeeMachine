@@ -1,0 +1,224 @@
+
+using System.IO.Ports;
+using NModbus;
+using NModbus.Serial;
+
+namespace CupFetcherController{
+
+    public class NHduinoController
+    {
+        private const int DATA_REFRESH_TIME_MS = 200;
+        private const int MAIN_LOOP_REFRESH_TIME_MS = 200;
+        private const int HOMING_TIME_MS = 0;
+        private const int CALIBRATING_TIME_MS = 0;
+        private const int COFFEE_GETTING_TIME_MS = 0;
+        private const int COFFEE_EXPORTING_TIME_MS = 0;
+
+
+        //Global properties
+        private const byte DEVICE_ADDRESS = 1;
+        private const int BAUD_RATE = 115200;
+        private const int PORT_TIMEOUT = 100; //In miliseconds
+        private SerialPort port;
+        private ModbusFactory factory;
+        private IModbusMaster conn;
+
+
+        private bool firstPhaseDone = false;
+        private NHduinoRegisters nhduino;
+
+
+        public NHduinoRegisters.Procedures executedProcedure{ get; private set; } = NHduinoRegisters.Procedures.None;
+        private int procedureTimeout = 0;
+        public NHduinoRegisters.States State { get; private set; }
+        public string ErrorMessage { get; private set; } = "";
+        public byte CupOccupacy { get; private set; } = 0;
+
+
+        public bool procedureStartFailed { get; private set; } = false;
+        public bool procedureTimedOut { get; private set; } = false;
+
+
+
+
+
+        //Constructor
+        public NHduinoController(string portName)
+        {
+            port = new()
+            {
+                PortName = portName,
+                BaudRate = BAUD_RATE,
+                DataBits = 8,
+                Parity = Parity.Even,
+                StopBits = StopBits.One
+            };
+            port.Open();
+
+            factory = new();
+            conn = factory.CreateRtuMaster(port);
+            conn.Transport.ReadTimeout = PORT_TIMEOUT;
+            conn.Transport.WriteTimeout = PORT_TIMEOUT;
+            nhduino = new();
+        }
+
+
+
+
+
+        //Private methods
+        private void ReadInputs()
+        {
+            ushort[] rxData = conn.ReadInputRegisters(DEVICE_ADDRESS, NHduinoRegisters.INPUT_REGISTER, 1);
+            nhduino.inputs.UpdateValue(rxData[0]);
+            ErrorMessage = nhduino.inputs.GetErrorMessage();
+        }
+
+        private void ReadControlData()
+        {
+            ReadInputs();
+            ushort[] rxData = conn.ReadHoldingRegisters(DEVICE_ADDRESS, NHduinoRegisters.CONTROL_REGISTER, 1);
+            nhduino.controls.UpdateValue(rxData[0]);
+
+            State = nhduino.controls.GetState();
+        }
+
+        private void SendCommand()
+        {
+            conn.WriteSingleRegister(DEVICE_ADDRESS, NHduinoRegisters.CONTROL_REGISTER, nhduino.controls.Value);
+        }
+
+        /// <summary>
+        /// Starts procedure
+        /// </summary>
+        /// <param name="procedure">Procedure name</param>
+        /// <returns>False if procedure cannot be started, true otherwise</returns>
+        private bool StartProcedure(NHduinoRegisters.Procedures proc)
+        {
+            ReadControlData();
+            if (nhduino.controls.IsRunning() == false)
+            {
+                return false;
+            }
+
+            switch (proc)
+            {
+                case NHduinoRegisters.Procedures.None:
+                    return true;
+                case NHduinoRegisters.Procedures.ProcedureCalibrating:
+                    procedureTimeout = CALIBRATING_TIME_MS;
+                    break;
+                case NHduinoRegisters.Procedures.ProcedureHoming:
+                    if (nhduino.inputs.IsCalibrated() == false)
+                    {
+                        return false;
+                    }
+                    procedureTimeout = HOMING_TIME_MS;
+                    break;
+                case NHduinoRegisters.Procedures.ProcedureGetCoffee:
+                    if (nhduino.inputs.IsHomed() == false || nhduino.controls.IsError() == true)
+                    {
+                        return false;
+                    }
+                    procedureTimeout = COFFEE_GETTING_TIME_MS;
+                    break;
+                case NHduinoRegisters.Procedures.ProcedureExportCoffee:
+                    if (firstPhaseDone == false || nhduino.controls.IsError() == true)
+                    {
+                        return false;
+                    }
+                    procedureTimeout = COFFEE_EXPORTING_TIME_MS;
+                    break;
+            }
+
+            procedureStartFailed = false;
+            procedureTimedOut = false;
+
+            nhduino.controls.SetProcedure(executedProcedure);
+            nhduino.controls.SetState(NHduinoRegisters.States.Running);
+            firstPhaseDone = false;
+            SendCommand();
+            return true;
+        }
+
+        /// <summary>
+        /// Function waits until procedure finishes
+        /// </summary>
+        /// <param name="timeout">max time of procedure</param>
+        /// <returns>Whether procedure finished before timeout</returns>
+        private bool WaitUntilDone(int timeout)
+        {
+            if (timeout == 0)
+            {
+                return true;
+            }
+            for (int i = 0; i < timeout; i += DATA_REFRESH_TIME_MS)
+            {
+                ReadControlData();
+                if (nhduino.controls.IsError() == true)
+                {
+                    return false;
+                }
+                if (nhduino.controls.IsDone() == true)
+                {
+                    if (executedProcedure == NHduinoRegisters.Procedures.ProcedureGetCoffee)
+                    {
+                        firstPhaseDone = true;
+                    }
+                    procedureTimeout = 0;
+                    executedProcedure = NHduinoRegisters.Procedures.None;
+                    return true;
+                }
+            }
+            procedureTimedOut = true;
+            return false;
+        }
+
+
+        /// <summary>
+        /// Error detection
+        /// </summary>
+        /// <returns>Whether controll program encountered an error</returns>
+        bool IsError()
+        {
+            return State == NHduinoRegisters.States.Error || procedureStartFailed || procedureTimedOut;
+        }
+
+
+        /// <summary>
+        /// Sets new procedure if previous one finished
+        /// </summary>
+        /// <param name="proc"></param>
+        /// <returns></returns>
+
+        public bool SetProcedure(NHduinoRegisters.Procedures proc)
+        {
+            if (executedProcedure != NHduinoRegisters.Procedures.None)
+            {
+                return false;
+            }
+            executedProcedure = proc;
+            return true;
+        }
+
+        /// <summary>
+        /// Main loop, should run in separated thread
+        /// </summary>
+        public void ConrolLoop()
+        {
+            while (true)
+            {
+                if (StartProcedure(executedProcedure) == false)
+                {
+                    procedureStartFailed = true;
+                }
+                else if (WaitUntilDone(procedureTimeout) == false)
+                {
+                    return;
+                }
+                Thread.Sleep(MAIN_LOOP_REFRESH_TIME_MS);
+            }
+            
+        }
+    }
+}

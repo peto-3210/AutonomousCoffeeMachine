@@ -1,0 +1,3 @@
+dotnet add package NModbus
+dotnet add package NModbus.Serial
+dotnet add package System.Device.Gpio

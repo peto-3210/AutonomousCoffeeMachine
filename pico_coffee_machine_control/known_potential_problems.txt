@@ -1,0 +1,30 @@
+The situations described here may cause some issues. No related
+problems have ever been recorded, but they might potentially
+appear in future.
+
+1. During the multiple consecutive series of large reading operations,
+signalling LED stays turned on even after transmission ended. The cause
+of this bug is unknown. No other effects of this behaviour on program 
+have been observed.
+
+2. During the button push operation, Pico may report register reading
+failure or button pushing failure if user pushes the button in same
+time. PIO machine for register handling will always recover from 
+this state on its own, without the need for microcontroller reset.
+
+3. During attempt to turn on the machine immediately after it has been
+turned off, the operation will not be executed. This happens because
+no pulse on standby LED has been detected yet, so the machine assumes
+AC is disconnected.
+
+4. Power button push and release is detected via interrupt. In case
+the button will be pushed or released during interrupt handling, 
+this event may not be recorded. Same could happend due to button
+bouncing. So far, no issues of this kind have been observed.
+
+5. After the machine has been in standby mode for longer time
+(days, ...) and the microcontroller has been connected to machine
+for half an hour, SPI reading sometimes fails. Microcontroller reset 
+often does not solve the problem. After few reading operations, 
+the issue will fix itself. The cause of this problem is currently
+unknown. 

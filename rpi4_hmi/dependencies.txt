@@ -1,0 +1,3 @@
+Install-Package NModbus
+Install-Package NModbus.Serial
+Install-Package System.Device.Gpio

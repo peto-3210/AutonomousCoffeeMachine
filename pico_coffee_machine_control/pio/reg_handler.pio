@@ -1,0 +1,56 @@
+
+;PIO state machine for sending/receiving commands of buttons.
+;This machine will synchronize automatically after start
+
+.define PUBLIC REG_CLK_PIN 12
+.define PUBLIC REG_LD_PIN 13
+.define PUBLIC REG_QH_PIN 14
+.define PUBLIC REG_CMD_PIN 15
+
+;.define PUBLIC REG_SIDESET_PIN 16
+
+.program reg_handler
+;.side_set 1 opt
+.wrap_target
+
+set y 7                           ;Prepares for reading
+in null, 32                       ;Puts zeros to buffer
+wait 0 gpio REG_LD_PIN            ;Waits until transmission starts
+
+pull noblock                      ;Fetches data to write out
+wait 0 gpio REG_CLK_PIN                 
+
+start_reading:
+    wait 1 gpio REG_CLK_PIN       ;Waits for clk rising_edge
+    out pins, 1                   ;Writes first bit of command
+
+    wait 0 gpio REG_CLK_PIN       ;Waits for falling edge (data ready)
+    in pins, 1                    ;Reads value
+
+    jmp y--, start_reading        ;If enough data was read,
+    push noblock                  ;sends them to RX queue
+
+    wait 1 gpio REG_CLK_PIN  
+    out pins, 1                   ;and clears output
+.wrap
+
+% c-sdk {
+
+void reg_handler_program_init(PIO pio, uint sm, uint offset, float clkdiv)
+{
+    pio_sm_config cfg = reg_handler_program_get_default_config(offset);
+    sm_config_set_in_shift(&cfg, true, false, 8);
+    sm_config_set_out_shift(&cfg, true, false, 8);
+    sm_config_set_clkdiv(&cfg, clkdiv);    //65535
+
+    sm_config_set_in_pins(&cfg, REG_QH_PIN);
+    sm_config_set_out_pins(&cfg, REG_CMD_PIN, 1);
+
+    pio_gpio_init(pio, REG_CMD_PIN);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, REG_QH_PIN, 3, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, REG_CMD_PIN, 1, true);
+
+    pio_sm_init(pio, sm, offset, &cfg);
+}
+%}

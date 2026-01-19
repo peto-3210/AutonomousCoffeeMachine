@@ -1,0 +1,42 @@
+;PIO state machine for SPI receiving
+;This machine must be synchronized from outside before start
+;For frequency 125MHz, one tick is 40ns
+;For 100us delay, we need 2500=0b10 01110 00100 ticks 
+
+.define PUBLIC SPI_MOSI_PIN 9
+.define PUBLIC SPI_CS_PIN 10
+.define PUBLIC SPI_CLK_PIN 11
+
+;.define PUBLIC SPI_SIDESET_PIN 17
+
+.program spi_recv
+;.side_set 1 opt
+.wrap_target
+set y, 7                      ;Prepares for reading
+in null, 32 
+
+read_value:
+    wait 0 gpio SPI_CLK_PIN   ;Waits for falling edge (data changes)
+    wait 1 gpio SPI_CLK_PIN   ;Waits for rising edge 
+    in pins, 1                ;Reads value
+    jmp y--, read_value       ;If enough data was read,
+
+    push noblock              ;sends them to RX queue
+.wrap
+
+% c-sdk {
+
+void spi_recv_program_init(PIO pio, uint sm, uint offset, float clkdiv)
+{
+    pio_sm_config cfg = spi_recv_program_get_default_config(offset);
+    sm_config_set_in_shift(&cfg, false, false, 8);
+    sm_config_set_out_shift(&cfg, false, false, 8);
+    sm_config_set_clkdiv(&cfg, clkdiv);    //65535
+
+    sm_config_set_in_pins(&cfg, SPI_MOSI_PIN);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, SPI_MOSI_PIN, 3, false);
+
+    pio_sm_init(pio, sm, offset, &cfg);
+}
+%}

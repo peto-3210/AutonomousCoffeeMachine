@@ -1,0 +1,166 @@
+
+using System.IO.Ports;
+using NModbus;
+using NModbus.Serial;
+
+namespace CupFetcherController{
+
+    public class NHduinoRegisters
+    {
+        public enum Procedures : byte{
+            None,
+            ProcedureHoming,
+            ProcedureGetCoffee,
+            ProcedureExportCoffee,
+            ProcedureCalibrating,
+        };
+
+        public enum States : byte
+        {
+            Idle,
+            Running,
+            Pausing, //Skipped
+            Paused, //Skipped
+            Error,
+            Done
+        };
+
+
+        public const ushort CONTROL_REGISTER = 0;
+        public const ushort INPUT_REGISTER = 0;
+
+
+
+
+        //Control holding register
+        public class ControlRegister()
+        {
+            public ushort Value { get; private set; } = 0;
+            public void UpdateValue(ushort newData)
+            {
+                Value = newData;
+            }
+
+            public void SetProcedure(Procedures procedure)
+            {
+                Value |= (byte)procedure;
+            }
+
+            public void SetState(States state)
+            {
+                Value |= (ushort)((ushort)state << 8);
+            }
+
+            public Procedures GetProcedure()
+            {
+                return (Procedures)(Value & 0xff);
+            }
+
+            public States GetState()
+            {
+                return (States)((Value & 0xff00) >> 8);
+            }
+
+            public bool IsRunning()
+            {
+                return GetState() == States.Running;
+            }
+
+            public bool IsDone()
+            {
+                return GetState() == States.Done;
+            }
+
+            public bool IsError()
+            {
+                return GetState() == States.Error;
+            }
+
+            public bool IsReady()
+            {
+                return GetState() == States.Idle || GetState() == States.Done;
+            }
+        }
+
+
+
+
+
+        //Input register
+        public class InputRegister()
+        {
+            private ushort Value;
+
+            public void UpdateValue(ushort Value)
+            {
+                this.Value = Value;
+            }
+
+            //Inputs work in negative logic
+            public bool GetSensorInput(ushort sensorNum)
+            {
+                if (sensorNum > 3)
+                {
+                    return false;
+                }
+                return (Value & (1 << sensorNum)) > 0;
+            }
+
+            public byte GetCupOccupacy()
+            {
+                return (byte)((Value & 0b11110000) >> 4);
+            }
+
+            public bool IsHomed()
+            {
+                return (Value & 0b0000000100000000) > 0;
+            }
+
+            public bool IsCalibrated()
+            {
+                return (Value & 0b0000001000000000) > 0;
+            }
+
+            public bool ErrNoCups()
+            {
+                return (Value & 0b0000100000000000) > 0;
+            }
+
+            public bool ErrFullStorage()
+            {
+                return (Value & 0b0001000000000000) > 0;
+            }
+
+            public bool ErrCupRemoved()
+            {
+                return (Value & 0b0010000000000000) > 0;
+            }
+
+            public string GetErrorMessage()
+            {
+                if (ErrNoCups())
+                {
+                    return "No cups in cup storage!";
+                }
+
+                if (ErrFullStorage())
+                {
+                    return "Drink storage is full!";
+                }
+
+                if (ErrCupRemoved())
+                {
+                    return "Cup has been removed during procedure!";
+                }
+                return "";
+            }
+
+        }
+
+
+        public InputRegister inputs{ get; private set; } = new();
+        public ControlRegister controls{ get; private set; } = new();
+        
+    }
+
+}
